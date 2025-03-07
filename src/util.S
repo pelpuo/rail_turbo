@@ -7,15 +7,19 @@
 	.align	2
 	
 	.globl  stub
+	.extern stub
 	.type	stub, @function
 
 	.globl  exit_binary
+	.extern exit_binary
 	.type	exit_binary, @function
 
 	.globl  instrument
+	.extern instrument
 	.type	instrument, @function
 
 	.globl  init
+	.extern init
 	.type	init, @function
 
 
