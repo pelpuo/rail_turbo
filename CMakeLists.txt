@@ -36,7 +36,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -march=rv64imafd -mabi=lp64d -mno-rel
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -DSTUBREGIONS -march=rv64imafd -mabi=lp64d -mno-relax")
 
 
-file(GLOB HEADER_FILES ${SRCDIR}/*.h ${SRCDIR}/*.c ${SRCDIR}/*.cpp ${SRCDIR}/*.S)
+# file(GLOB HEADER_FILES ${SRCDIR}/*.h ${SRCDIR}/*.c ${SRCDIR}/*.cpp ${SRCDIR}/*.S)
+file(GLOB HEADER_FILES ${SRCDIR}/*.h ${SRCDIR}/*.c ${SRCDIR}/*.cpp)
 # file(GLOB_RECURSE HEADER_FILES ${ROUTINESDIR}/*.cpp)
 
 # Set assembler flags for RISC-V

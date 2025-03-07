@@ -187,7 +187,7 @@ typedef enum {
   C_ADDW,
 } InstName;
 
-const char *InstNameString[] = {
+static const char *InstNameString[] = {
     "LUI",        "AUIPC",     "JAL",       "JALR",      "BEQ",
     "BNE",        "BLT",       "BGE",       "BLTU",      "BGEU",
     "LB",         "LH",        "LW",        "LBU",       "LHU",

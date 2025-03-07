@@ -31,7 +31,7 @@ typedef enum {
     UNKNOWN_TYPE
   } InstType;
   
-  InstType getOpcodeType(int opcode) {
+  static InstType getOpcodeType(int opcode) {
     switch (opcode) {
     case 0b0110111:
     case 0b0010111:
@@ -68,7 +68,7 @@ typedef enum {
   }
   
   // Function to get instruction type from opfunct using switch
-  InstType getOpfunctType(int funct) {
+  static InstType getOpfunctType(int funct) {
     switch (funct) {
     case 0b00000:
       return CIW_TYPE;

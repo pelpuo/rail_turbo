@@ -1,9 +1,13 @@
 #ifndef PRINTUTILS_H
 #define PRINTUTILS_H
 
+#include <stdio.h>
+#include <stdint.h>
+
 #include "instructions.h"
 #include "regfile.h"
 #include "opcodes.h"
+#include "logger.h"
 
 /**
  * Generic function to print decoded RISC-V instructions

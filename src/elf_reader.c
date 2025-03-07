@@ -69,6 +69,7 @@ void getTextSection(ElfReader *reader) {
             reader->textSection = (char *)malloc(reader->sectionHeaders[i].sh_size);
             fread(reader->textSection, reader->sectionHeaders[i].sh_size, 1, reader->elfFile);
             reader->program_counter = reader->sectionHeaders[i].sh_offset;
+            reader->textSectionSize = reader->sectionHeaders[i].sh_size;
             break;
         }
     }
@@ -121,7 +122,7 @@ uint32_t getNextInstruction(uint8_t *textSection, size_t textSize, size_t progra
     size_t offset = program_counter - textSectionOffset;
     uint32_t instruction = 0;
 
-    if (offset >= textSize - 4) {
+    if (offset >= textSize) {
         return 0; // Return 0 if out of bounds
     }
 
@@ -129,14 +130,16 @@ uint32_t getNextInstruction(uint8_t *textSection, size_t textSize, size_t progra
 
     if ((opcode & 0b11) == 0b11) {
         *pcIncrement = 4; // Full 32-bit instruction
+        instruction = *(uint32_t *)(textSection + offset);
     } else {
         *pcIncrement = 2; // Compressed 16-bit instruction
+        instruction = *(uint16_t *)(textSection + offset);
     }
 
     // Combine bytes into a 32-bit instruction
-    for (size_t j = 0; j < *pcIncrement; ++j) {
-        instruction |= (uint32_t)textSection[offset + j] << (j * 8);
-    }
+    // for (size_t j = 0; j < *pcIncrement; ++j) {
+    //     instruction |= (uint32_t)textSection[offset + j] << (j * 8);
+    // }
 
     return instruction;
 }

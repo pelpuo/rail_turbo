@@ -37,7 +37,7 @@ typedef enum{
     T6
 }GPregs;
 
-const char* GPregnames[32] = {
+static const char* GPregnames[32] = {
     "zero",    
     "ra",    
     "sp",    
