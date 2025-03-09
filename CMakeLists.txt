@@ -1,12 +1,13 @@
-cmake_minimum_required (VERSION 3.13.4)
+cmake_minimum_required(VERSION 3.13.4)
 
-project ("riscv-lifter")
+project("riscv-lifter")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Set the source directory
 set(SRCDIR src)
+set(HELPERDIR helpers)
 set(ROUTINESDIR routines)
 
 enable_language(C ASM)
@@ -36,7 +37,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -march=rv64imafd -mabi=lp64d -mno-rel
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -DSTUBREGIONS -march=rv64imafd -mabi=lp64d -mno-relax")
 
 
-file(GLOB HEADER_FILES ${SRCDIR}/*.h ${SRCDIR}/*.c ${SRCDIR}/*.cpp ${SRCDIR}/*.S)
+file(GLOB HEADER_FILES ${SRCDIR}/*.h ${SRCDIR}/*.c ${SRCDIR}/*.cpp ${SRCDIR}/*.S ${HELPERDIR}/*.h ${HELPERDIR}/*.c ${HELPERDIR}/*.cpp ${HELPERDIR}/*.S)
 # file(GLOB HEADER_FILES ${SRCDIR}/*.h ${SRCDIR}/*.c ${SRCDIR}/*.cpp)
 # file(GLOB_RECURSE HEADER_FILES ${ROUTINESDIR}/*.cpp)
 

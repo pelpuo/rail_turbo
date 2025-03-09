@@ -1,10 +1,11 @@
+#include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include <fcntl.h>
 
+#include "helpers/map.h"
 #include "src/decode.h"
 #include "src/elf_reader.h"
 #include "src/logger.h"
@@ -41,12 +42,12 @@ int main(int argc, char **argv, char **envp) {
     return 1;
   }
 
-  char *dataBuffer =
-      (char *)(mmap((void *)(0x10000), // address
-                    4 * 1024 * 1024,     // size = 4MB
-                    PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE,
-                    -1, // fd (not used here)
-                    0));
+  char *dataBuffer = (char *)(mmap((void *)(0x10000), // address
+                                   4 * 1024 * 1024,   // size = 4MB
+                                   PROT_READ | PROT_WRITE | PROT_EXEC,
+                                   MAP_ANONYMOUS | MAP_PRIVATE,
+                                   -1, // fd (not used here)
+                                   0));
   if (dataBuffer == MAP_FAILED) {
     perror("mmap for dataBuffer failed");
     exit(1);
@@ -54,7 +55,8 @@ int main(int argc, char **argv, char **envp) {
 
   char *memory = (char *)(mmap((void *)(0x5000000), // address
                                4 * 1024 * 1024,     // size = 4MB
-                               PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE,
+                               PROT_READ | PROT_WRITE | PROT_EXEC,
+                               MAP_ANONYMOUS | MAP_PRIVATE,
                                -1,  // fd (not used here)
                                0)); // offset (not used here)
   if (memory == MAP_FAILED) {
@@ -72,13 +74,16 @@ int main(int argc, char **argv, char **envp) {
                   reader.elfHeader.e_shnum, dataBuffer, &bound,
                   reader.shstrtab);
 
-  for (int i = 0; i < 100; i++) {
+  while (1) {
     uint32_t nextInst = getNextInstruction(
         reader.textSection, reader.textSectionSize, program_counter,
         reader.textSectionOffset, &pc_increment);
+    if (nextInst == 0) {
+      break;
+    }
     program_counter += pc_increment;
     fprintf(fptr, "%08x :\t", nextInst);
-    printf("%x\n", nextInst);
+    // printf("%x\n", nextInst);
     decode_instruction(nextInst, 1);
   }
 
@@ -98,4 +103,22 @@ int main(int argc, char **argv, char **envp) {
   // setExitRoutine(exitFxn);
 
   // runInstrument();
+
+  hashmap *map = hashmap_create();
+
+  int error;
+
+  error = hashmap_set(map, hashmap_str_lit("hello"), 400);
+  if (error == -1)
+    fprintf(stderr, "hashmap_set: %s\n", strerror(error));
+
+  uintptr_t result;
+
+  if (hashmap_get(map, "hello", 5, &result)) {
+    // do something with result
+    printf("result is %i\n", (int)result);
+  } else {
+    // the item could not be found
+    printf("error: unable to locate entry \"hello\"\n");
+  }
 }
