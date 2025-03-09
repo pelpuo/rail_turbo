@@ -56,6 +56,7 @@ int hashmap_get(hashmap* map, const void* key, size_t ksize, uintptr_t* out_val)
 
 #ifdef __HASHMAP_REMOVABLE
 void hashmap_remove(hashmap *map, const void *key, size_t ksize);
+
 // same as `hashmap_remove()`, but it allows you to free an entry's data first via a callback.
 void hashmap_remove_free(hashmap* m, const void* key, size_t ksize, hashmap_callback c, void* usr);
 #endif

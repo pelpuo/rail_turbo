@@ -6,9 +6,11 @@
 #include <unistd.h>
 
 #include "helpers/map.h"
+#include "src/code_cache.h"
 #include "src/decode.h"
 #include "src/elf_reader.h"
 #include "src/logger.h"
+#include "src/railBasicBlock.h"
 
 int num_instructions;
 int num_basic_blocks;
@@ -42,6 +44,7 @@ int main(int argc, char **argv, char **envp) {
     return 1;
   }
 
+  // Setting up memory regions for binary
   char *dataBuffer = (char *)(mmap((void *)(0x10000), // address
                                    4 * 1024 * 1024,   // size = 4MB
                                    PROT_READ | PROT_WRITE | PROT_EXEC,
@@ -53,72 +56,97 @@ int main(int argc, char **argv, char **envp) {
     exit(1);
   }
 
-  char *memory = (char *)(mmap((void *)(0x5000000), // address
-                               4 * 1024 * 1024,     // size = 4MB
-                               PROT_READ | PROT_WRITE | PROT_EXEC,
-                               MAP_ANONYMOUS | MAP_PRIVATE,
-                               -1,  // fd (not used here)
-                               0)); // offset (not used here)
+  memory = (char *)(mmap((void *)(0x5000000), // address
+                         4 * 1024 * 1024,     // size = 4MB
+                         PROT_READ | PROT_WRITE | PROT_EXEC,
+                         MAP_ANONYMOUS | MAP_PRIVATE,
+                         -1,  // fd (not used here)
+                         0)); // offset (not used here)
+
   if (memory == MAP_FAILED) {
     perror("mmap for memory failed");
     exit(1);
   }
 
+  char *binBrk = (char *)(mmap((void *)(0x10000000), // address
+                               0x90000000,           // size = 4MB
+                               PROT_READ | PROT_WRITE | PROT_EXEC,
+                               MAP_PRIVATE | MAP_ANONYMOUS,
+                               -1, // fd (not used here)
+                               0));
+
+  if (binBrk == MAP_FAILED) {
+    perror("mmap for memory failed");
+    exit(1);
+  }
+
+  // Extracting text section
   int bound = 0;
   size_t program_counter = reader.elfHeader.e_entry;
   int pc_increment = 4;
 
   getTextSection(&reader);
 
-  getDataSections(reader.elfFile, reader.sectionHeaders,
-                  reader.elfHeader.e_shnum, dataBuffer, &bound,
-                  reader.shstrtab);
+  // Extracting Data sections
+  // getDataSections(reader.elfFile, reader.sectionHeaders,
+  //                 reader.elfHeader.e_shnum, dataBuffer, &bound,
+  //        );
 
-  while (1) {
-    uint32_t nextInst = getNextInstruction(
-        reader.textSection, reader.textSectionSize, program_counter,
-        reader.textSectionOffset, &pc_increment);
-    if (nextInst == 0) {
-      break;
-    }
-    program_counter += pc_increment;
-    fprintf(fptr, "%08x :\t", nextInst);
-    // printf("%x\n", nextInst);
-    decode_instruction(nextInst, 1);
-  }
+  getDataSections(dataBuffer, &bound);
 
-  // for (size_t i = 0; i < reader.textSectionSize; i += 4) {
-  //     uint32_t instruction = *(uint32_t *)(reader.textSection + i);
-  //     printf("0x%08lx: 0x%08x\n", reader.elfHeader.e_entry + i, instruction);
+  // Extract first basic block
+
+  // while (1) {
+  //   uint32_t nextInst = getNextInstruction(
+  //       reader.textSection, reader.textSectionSize, program_counter,
+  //       reader.textSectionOffset, &pc_increment);
+  //   if (nextInst == 0) {
+  //     break;
+  //   }
+  //   program_counter += pc_increment;
+  //   fprintf(fptr, "%08x :\t", nextInst);
+  //   // printf("%x\n", nextInst);
+  //   decode_instruction(nextInst, 1);
   // }
 
-  freeElfReader(&reader);
+  hashmap *basicBlocksMap = hashmap_create();
 
-  // num_instructions = 0;
-  // num_basic_blocks = 0;
-
-  // setTarget(argv[1]);
-  // registerArgs(argc-1, &argv[1], &envp[0]);
-  // setLoggingFile("rail_logs");
-  // setExitRoutine(exitFxn);
-
-  // runInstrument();
-
-  hashmap *map = hashmap_create();
+  allocateBB(elfReader.program_counter, memory, &basicBlocksMap);
 
   int error;
 
-  error = hashmap_set(map, hashmap_str_lit("hello"), 400);
-  if (error == -1)
-    fprintf(stderr, "hashmap_set: %s\n", strerror(error));
+  // associates the value `400` with the key "hello"
+  // error = hashmap_set(basicBlocksMap, "hello", sizeof("hello") - 1, 400); //
+  // `- 1` if you want to ignore the null terminator if (error == -1)
+  //     fprintf(stderr, "hashmap_set: %s\n", strerror(errno));
+
+  // hashmap *map = hashmap_create();
+
+  // int error;
 
   uintptr_t result;
 
-  if (hashmap_get(map, "hello", 5, &result)) {
+  if (hashmap_get(basicBlocksMap, (void *)(elfReader.program_counter), sizeof(elfReader.program_counter), &result)) {
     // do something with result
     printf("result is %i\n", (int)result);
   } else {
     // the item could not be found
     printf("error: unable to locate entry \"hello\"\n");
   }
+
+  // error = hashmap_set(map, hashmap_str_lit("hello"), 400);
+  // if (error == -1)
+  // fprintf(stderr, "hashmap_set: %s\n", strerror(error));
+
+  // uintptr_t result;
+
+  // if (hashmap_get(map, "hello", 5, &result)) {
+  //   // do something with result
+  //   printf("result is %i\n", (int)result);
+  // } else {
+  //   // the item could not be found
+  //   printf("error: unable to locate entry \"hello\"\n");
+  // }
+
+  // freeElfReader(&reader);
 }

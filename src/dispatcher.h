@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "elf_reader.h"
 
-extern ElfReader elfReaderPtr;
+// extern ElfReader elfReader;
 
 /**
  * Initializes registers and call PRE routines before execution starts

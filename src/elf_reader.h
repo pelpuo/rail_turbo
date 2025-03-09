@@ -28,6 +28,9 @@ typedef struct {
     int pcIncrement;
 } ElfReader;
 
+static ElfReader elfReader;
+static int pcIncrement = 4;
+
     /**
      * Prints all sections in binary 
     */
@@ -56,7 +59,8 @@ typedef struct {
     /**
      * Stores data sections from binary in a buffer
     */
-   int getDataSections(FILE *elfFile, Elf64_Shdr *sectionHeaders, int sectionCount, char *buffer, int *bound, char *shstrtab);
+//    int getDataSections(FILE *elfFile, Elf64_Shdr *sectionHeaders, int sectionCount, char *buffer, int *bound, char *shstrtab);
+   int getDataSections(char *buffer, int *bound);
 
     /**
      * Loads text sections into vector textSection
@@ -85,7 +89,8 @@ typedef struct {
      * Returns instruction at the location of the program counter
      * @return next instruction as uint32_t
     */
-    uint32_t getNextInstruction(uint8_t *textSection, size_t textSize, size_t program_counter, size_t textSectionOffset, size_t *pcIncrement); 
+    // uint32_t getNextInstruction(uint8_t *textSection, size_t textSize, size_t program_counter, size_t textSectionOffset, size_t *pcIncrement); 
+    uint32_t getNextInstruction(); 
 
     /**
      * Increments pseudo program counter by 4

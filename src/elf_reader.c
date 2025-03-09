@@ -1,43 +1,47 @@
 #include "elf_reader.h"
 
 // Function to initialize ElfReader
+
+// ElfReader elfReader;
+
+
 int initElfReader(ElfReader *reader, const char *filename) {
-    reader->elfFile = fopen(filename, "rb");
-    if (!reader->elfFile) {
+    elfReader.elfFile = fopen(filename, "rb");
+    if (!elfReader.elfFile) {
         perror("Error opening file");
         return -1;
     }
 
     // Read ELF header
-    fread(&reader->elfHeader, sizeof(Elf64_Ehdr), 1, reader->elfFile);
+    fread(&elfReader.elfHeader, sizeof(Elf64_Ehdr), 1, elfReader.elfFile);
 
     // Check ELF magic number
-    if (strncmp((char *)reader->elfHeader.e_ident, "\x7F""ELF", 4) != 0) {
+    if (strncmp((char *)elfReader.elfHeader.e_ident, "\x7F""ELF", 4) != 0) {
         fprintf(stderr, "Not a valid ELF file: %s\n", filename);
         return -1;
     }
 
     // Check if it's RISC-V
-    if (reader->elfHeader.e_machine != EM_RISCV) {
+    if (elfReader.elfHeader.e_machine != EM_RISCV) {
         fprintf(stderr, "Not a RISC-V Binary: %s\n", filename);
         return -1;
     }
 
     // Read program headers
-    reader->programHeaders = malloc(reader->elfHeader.e_phnum * sizeof(Elf64_Phdr));
-    fseek(reader->elfFile, reader->elfHeader.e_phoff, SEEK_SET);
-    fread(reader->programHeaders, sizeof(Elf64_Phdr), reader->elfHeader.e_phnum, reader->elfFile);
+    elfReader.programHeaders = malloc(elfReader.elfHeader.e_phnum * sizeof(Elf64_Phdr));
+    fseek(elfReader.elfFile, elfReader.elfHeader.e_phoff, SEEK_SET);
+    fread(elfReader.programHeaders, sizeof(Elf64_Phdr), elfReader.elfHeader.e_phnum, elfReader.elfFile);
 
     // Read section headers
-    reader->sectionHeaders = malloc(reader->elfHeader.e_shnum * sizeof(Elf64_Shdr));
-    fseek(reader->elfFile, reader->elfHeader.e_shoff, SEEK_SET);
-    fread(reader->sectionHeaders, sizeof(Elf64_Shdr), reader->elfHeader.e_shnum, reader->elfFile);
+    elfReader.sectionHeaders = malloc(elfReader.elfHeader.e_shnum * sizeof(Elf64_Shdr));
+    fseek(elfReader.elfFile, elfReader.elfHeader.e_shoff, SEEK_SET);
+    fread(elfReader.sectionHeaders, sizeof(Elf64_Shdr), elfReader.elfHeader.e_shnum, elfReader.elfFile);
 
     // Read section header string table
-    Elf64_Shdr shstrtabHeader = reader->sectionHeaders[reader->elfHeader.e_shstrndx];
-    reader->shstrtab = malloc(shstrtabHeader.sh_size);
-    fseek(reader->elfFile, shstrtabHeader.sh_offset, SEEK_SET);
-    fread(reader->shstrtab, 1, shstrtabHeader.sh_size, reader->elfFile);
+    Elf64_Shdr shstrtabHeader = elfReader.sectionHeaders[elfReader.elfHeader.e_shstrndx];
+    elfReader.shstrtab = malloc(shstrtabHeader.sh_size);
+    fseek(elfReader.elfFile, shstrtabHeader.sh_offset, SEEK_SET);
+    fread(elfReader.shstrtab, 1, shstrtabHeader.sh_size, elfReader.elfFile);
 
     return 0;
 }
@@ -61,28 +65,28 @@ void print_sections(FILE* outfile, Elf64_Shdr* sectionHeaders, size_t section_co
 
 
 void getTextSection(ElfReader *reader) {
-    for (int i = 0; i < reader->elfHeader.e_shnum; ++i) {
-        const char *name = reader->shstrtab + reader->sectionHeaders[i].sh_name;
+    for (int i = 0; i < elfReader.elfHeader.e_shnum; ++i) {
+        const char *name = elfReader.shstrtab + elfReader.sectionHeaders[i].sh_name;
         if (strcmp(name, ".text") == 0) {
-            reader->textSectionOffset = reader->sectionHeaders[i].sh_addr;
-            fseek(reader->elfFile, reader->sectionHeaders[i].sh_offset, SEEK_SET);
-            reader->textSection = (char *)malloc(reader->sectionHeaders[i].sh_size);
-            fread(reader->textSection, reader->sectionHeaders[i].sh_size, 1, reader->elfFile);
-            reader->program_counter = reader->sectionHeaders[i].sh_offset;
-            reader->textSectionSize = reader->sectionHeaders[i].sh_size;
+            elfReader.textSectionOffset = elfReader.sectionHeaders[i].sh_addr;
+            fseek(elfReader.elfFile, elfReader.sectionHeaders[i].sh_offset, SEEK_SET);
+            elfReader.textSection = (char *)malloc(elfReader.sectionHeaders[i].sh_size);
+            fread(elfReader.textSection, elfReader.sectionHeaders[i].sh_size, 1, elfReader.elfFile);
+            elfReader.program_counter = elfReader.sectionHeaders[i].sh_offset;
+            elfReader.textSectionSize = elfReader.sectionHeaders[i].sh_size;
             break;
         }
     }
 }
 
 
-int getDataSections(FILE *elfFile, Elf64_Shdr *sectionHeaders, int sectionCount, char *buffer, int *bound, char *shstrtab) {
+int getDataSections(char *buffer, int *bound) {
     uint64_t start_addr = 0;
     char *buffer_pointer = buffer;
     
-    for (int i = 0; i < sectionCount; i++) {
-        Elf64_Shdr *section = &sectionHeaders[i];
-        const char *name = shstrtab + section->sh_name;
+    for (int i = 0; i < elfReader.elfHeader.e_shnum; i++) {
+        Elf64_Shdr *section = &elfReader.sectionHeaders[i];
+        const char *name = elfReader.shstrtab + section->sh_name;
 
         if (strcmp(name, ".text") == 0)
             continue;
@@ -99,14 +103,14 @@ int getDataSections(FILE *elfFile, Elf64_Shdr *sectionHeaders, int sectionCount,
         }
 
         // Seek to the section offset in the ELF file
-        if (fseek(elfFile, section->sh_offset, SEEK_SET) != 0) {
+        if (fseek(elfReader.elfFile, section->sh_offset, SEEK_SET) != 0) {
             fprintf(stderr, "Failed to seek to section %s\n", name);
             return start_addr;
         }
 
         // Read the section into the buffer
         buffer_pointer = buffer + section->sh_addr;
-        if (fread(buffer_pointer, 1, section->sh_size, elfFile) != section->sh_size) {
+        if (fread(buffer_pointer, 1, section->sh_size, elfReader.elfFile) != section->sh_size) {
             fprintf(stderr, "Failed to read section %s\n", name);
             return start_addr;
         }
@@ -118,22 +122,22 @@ int getDataSections(FILE *elfFile, Elf64_Shdr *sectionHeaders, int sectionCount,
     return start_addr;
 }
 
-uint32_t getNextInstruction(uint8_t *textSection, size_t textSize, size_t program_counter, size_t textSectionOffset, size_t *pcIncrement) {
-    size_t offset = program_counter - textSectionOffset;
+uint32_t getNextInstruction() {
+    size_t offset = elfReader.program_counter - elfReader.textSectionOffset;
     uint32_t instruction = 0;
 
-    if (offset >= textSize) {
+    if (offset >= elfReader.textSectionSize) {
         return 0; // Return 0 if out of bounds
     }
 
-    uint32_t opcode = (uint32_t)textSection[offset];
+    uint32_t opcode = (uint32_t)elfReader.textSection[offset];
 
     if ((opcode & 0b11) == 0b11) {
-        *pcIncrement = 4; // Full 32-bit instruction
-        instruction = *(uint32_t *)(textSection + offset);
+        pcIncrement = 4; // Full 32-bit instruction
+        instruction = *(uint32_t *)(elfReader.textSection + offset);
     } else {
-        *pcIncrement = 2; // Compressed 16-bit instruction
-        instruction = *(uint16_t *)(textSection + offset);
+        pcIncrement = 2; // Compressed 16-bit instruction
+        instruction = *(uint16_t *)(elfReader.textSection + offset);
     }
 
     // Combine bytes into a 32-bit instruction
@@ -143,62 +147,6 @@ uint32_t getNextInstruction(uint8_t *textSection, size_t textSize, size_t progra
 
     return instruction;
 }
-
-// int getDataSections(ElfReader *reader, char *buffer, int *bound) {
-//     // ...existing code...
-// }
-
-// void printSection(ElfReader *reader, const char *sectionName) {
-//     // ...existing code...
-// }
-
-// int getSymbols(ElfReader *reader, const char *symtabName) {
-//     // ...existing code...
-// }
-
-// Elf64_Sym getSymbol(ElfReader *reader, const char *symName) {
-//     // ...existing code...
-// }
-
-// const char *getFunctionName(ElfReader *reader, int addr) {
-//     // ...existing code...
-// }
-
-// void getFunctions(ElfReader *reader) {
-//     // ...existing code...
-// }
-
-// int jumpToMain(ElfReader *reader) {
-//     // ...existing code...
-// }
-
-// int jumpToEntry(ElfReader *reader) {
-//     // ...existing code...
-// }
-
-// uint32_t getNextInstruction(ElfReader *reader) {
-//     // ...existing code...
-// }
-
-// int getTextSectionOffset(ElfReader *reader) {
-//     return reader->textSectionOffset;
-// }
-
-// int getProgramCounter(ElfReader *reader) {
-//     return reader->program_counter;
-// }
-
-// void incProgramCounter(ElfReader *reader) {
-//     reader->program_counter += reader->pcIncrement;
-// }
-
-// void decProgramCounter(ElfReader *reader) {
-//     reader->program_counter -= reader->pcIncrement;
-// }
-
-// void setProgramCounter(ElfReader *reader, int newPC) {
-//     reader->program_counter = newPC;
-// }
 
 
 // Function to clean up memory
